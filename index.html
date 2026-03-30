@@ -1,0 +1,214 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>一站式服务</title>
+  <style>
+    :root {
+      --bg: #000;
+      --fg: #fff;
+      --muted: rgba(255,255,255,0.65);
+      --max-w: 860px;
+      --pad: clamp(20px, 6vw, 48px);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.85;
+    }
+    main {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: var(--pad);
+    }
+    .content {
+      width: 100%;
+      max-width: var(--max-w);
+    }
+    h1 {
+      font-size: clamp(28px, 6vw, 44px);
+      margin: 6px 0 16px;
+      letter-spacing: 0.02em;
+    }
+    h2 {
+      font-size: clamp(20px, 4.6vw, 28px);
+      margin: 28px 0 8px;
+    }
+    p {
+      margin: 0 0 14px;
+      font-size: clamp(16px, 4vw, 18px);
+      color: var(--fg);
+    }
+    .muted {
+      color: var(--muted);
+      font-size: clamp(13px, 3.4vw, 14px);
+      margin-top: 8px;
+    }
+    .divider {
+      height: 1px;
+      background: rgba(255,255,255,0.12);
+      margin: 22px 0;
+    }
+    .motion-btn {
+      position: fixed;
+      left: 50%;
+      bottom: 20px;
+      transform: translateX(-50%);
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 999px;
+      font-size: 14px;
+      cursor: pointer;
+      backdrop-filter: blur(6px);
+      display: none;
+      z-index: 10;
+    }
+    .flow {
+      display: inline-block;
+      will-change: transform;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="content" id="content">
+      <h1>一站式服务</h1>
+      <p>为品牌、企业、个人，提供全域新媒体营销的策划、执行、培训、咨询等全流程服务。力求为大家找到更高效更长远的内容表达与销售转化。</p>
+      <div class="divider"></div>
+      <h2>深度内容创作能力</h2>
+      <p>同时兼具 TVC、短视频、纪录片、深度文章稿件等高质量内容的策划与制作能力。</p>
+      <h2>丰富内容创作经验</h2>
+      <p>内容制作上拥有丰富的一线品牌服务经验。并积极参加创新创业、创新营销等比赛，开放接受众多投资人及跨界朋友的合作邀请，服务于华为、OPPO、美团、腾讯等企业。</p>
+      <h2>跨界基因提供全面能力</h2>
+      <p>团队分别具有广告导演和制片、凤凰卫视纪录片制片、MCN编导和运营、腾讯产品经理、腾讯投资、上海交大MBA、奇绩创坛校友、港中文工商管理等经验能力。具有更全局的服务能力与商业思维。</p>
+      <p class="muted">默认静止；启用陀螺仪后，字符会像受到重力一样向倾斜方向“下落”。</p>
+    </div>
+  </main>
+  <button class="motion-btn" id="motionBtn">启用陀螺仪</button>
+
+  <script>
+    (function () {
+      const btn = document.getElementById('motionBtn');
+      const content = document.getElementById('content');
+
+      function wrapText(node) {
+        const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, null);
+        const textNodes = [];
+        while (walker.nextNode()) {
+          if (walker.currentNode.nodeValue.trim().length > 0) {
+            textNodes.push(walker.currentNode);
+          }
+        }
+        textNodes.forEach(textNode => {
+          const text = textNode.nodeValue;
+          const frag = document.createDocumentFragment();
+          for (let i = 0; i < text.length; i++) {
+            const ch = text[i];
+            if (ch === ' ') {
+              frag.appendChild(document.createTextNode(' '));
+            } else {
+              const span = document.createElement('span');
+              span.className = 'flow';
+              span.textContent = ch;
+              frag.appendChild(span);
+            }
+          }
+          textNode.parentNode.replaceChild(frag, textNode);
+        });
+      }
+
+      wrapText(content);
+
+      const chars = Array.from(document.querySelectorAll('.flow'));
+      const state = chars.map(() => ({
+        x: 0,
+        y: 0,
+        vx: 0,
+        vy: 0,
+        mass: 0.9 + Math.random() * 0.6,
+        drag: 0.78 + Math.random() * 0.06
+      }));
+
+      let motionEnabled = false;
+      let gx = 0; // 重力向量 X
+      let gy = 0; // 重力向量 Y
+
+      const gravityStrength = 1.6; // 调整“下落感”强弱
+      const maxShift = 48;         // 限制位移避免太散
+
+      function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+      function onOrientation(e) {
+        if (!motionEnabled) return;
+        const gamma = clamp(e.gamma || 0, -45, 45); // 左右倾斜
+        const beta = clamp(e.beta || 0, -45, 45);  // 前后倾斜
+        // 将倾斜角度映射为重力方向
+        gx = (gamma / 45) * gravityStrength;
+        gy = (beta / 45) * gravityStrength;
+      }
+
+      function animate() {
+        if (!motionEnabled) return;
+        for (let i = 0; i < chars.length; i++) {
+          const el = chars[i];
+          const s = state[i];
+
+          // 受重力加速度影响
+          s.vx += gx / s.mass;
+          s.vy += gy / s.mass;
+
+          // 阻力
+          s.vx *= s.drag;
+          s.vy *= s.drag;
+
+          s.x += s.vx;
+          s.y += s.vy;
+
+          // 限制位移范围
+          s.x = clamp(s.x, -maxShift, maxShift);
+          s.y = clamp(s.y, -maxShift, maxShift);
+
+          el.style.transform = `translate3d(${s.x}px, ${s.y}px, 0)`;
+        }
+        requestAnimationFrame(animate);
+      }
+
+      function enableMotion() {
+        motionEnabled = true;
+        window.addEventListener('deviceorientation', onOrientation, true);
+        requestAnimationFrame(animate);
+      }
+
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        btn.style.display = 'inline-block';
+        btn.addEventListener('click', async () => {
+          try {
+            const res = await DeviceOrientationEvent.requestPermission();
+            if (res === 'granted') {
+              btn.style.display = 'none';
+              enableMotion();
+            }
+          } catch (err) {
+            console.warn(err);
+          }
+        });
+      } else if ('DeviceOrientationEvent' in window) {
+        btn.style.display = 'inline-block';
+        btn.addEventListener('click', () => {
+          btn.style.display = 'none';
+          enableMotion();
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
+
